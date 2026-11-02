@@ -67,6 +67,23 @@ HANDLE_PATTERN = r"^@?[A-Za-z0-9._]{1,30}$"
 # ---------------- App ---------------- #
 app = FastAPI(title="ArcAsa Appointment API")
 
+# Ensure all your production and preview domains are listed
+default_origins = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "https://www.arcasaunisexsalon.in",
+    "https://arcasaunisexsalon.in",
+]
+
+env_origins = [
+    o.strip()
+    for o in os.getenv("ALLOWED_ORIGINS", "").split(",")
+    if o.strip()
+]
+
+# Combine both so production custom domains work even if env var is missing
+ALLOWED_ORIGINS = list(set(default_origins + env_origins))
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
