@@ -1,0 +1,200 @@
+export const masSage = [
+    {
+        serviceName: "Oil Massage",
+        sid: "ABM_1001",
+        csid: "ABM",
+        price: "--",
+        metaid: "abm1001#5679",
+        children: [
+            {
+                serviceName: "Full Arms Massage",
+                sid: "ABM_1001_01",
+                csid: "ABM_1001",
+                price: 500,
+                metaid: "abm_10011_01$0500",
+                multi: false,
+            },
+            {
+                serviceName: "Full Legs Massage",
+                sid: "ABM_1001_02",
+                csid: "ABM_1001",
+                price: 500,
+                metaid: "abm_10011_02#0500",
+                multi: false,
+            },
+            {
+                serviceName: "Full Back Massage",
+                sid: "ABM_1001_03",
+                csid: "ABM_1001",
+                price: 500,
+                metaid: "abm_10011_03#0500",
+                multi: false,
+            },
+        ]
+    },
+    {
+        serviceName: "Premium Oil Massage",
+        sid: "ABM_1002",
+        csid: "ABM",
+        price: "--",
+        metaid: "abm1002#5679",
+        children: [
+            {
+                serviceName: "Full Arms Massage",
+                sid: "ABM_1002_01",
+                csid: "ABM_1002",
+                price: 1000,
+                metaid: "abm_10022_01$1000",
+                multi: false,
+            },
+            {
+                serviceName: "Full Legs Massage",
+                sid: "ABM_1002_02",
+                csid: "ABM_1002",
+                price: 1000,
+                metaid: "abm_10022_02#1000",
+                multi: false,
+            },
+            {
+                serviceName: "Full Back Massage",
+                sid: "ABM_1002_03",
+                csid: "ABM_1002",
+                price: 1000,
+                metaid: "abm_10022_03$1000",
+                multi: false,
+            },
+        ]
+    },
+    {
+        serviceName: "Creme` Massage",
+        sid: "ABM_1003",
+        csid: "ABM",
+        price: "--",
+        metaid: "abm1003$5679",
+        children: [
+            {
+                serviceName: "Full Arms Massage",
+                sid: "ABM_1003_01",
+                csid: "ABM_1003",
+                price: 1000,
+                metaid: "abm_10033_01$1000",
+                multi: false,
+            },
+            {
+                serviceName: "Full Legs Massage",
+                sid: "ABM_1003_02",
+                csid: "ABM_1003",
+                price: 1000,
+                metaid: "abm_10033_02#1000",
+                multi: false,
+            },
+            {
+                serviceName: "Full Back Massage",
+                sid: "ABM_1003_03",
+                csid: "ABM_1003",
+                price: 1000,
+                metaid: "abm_10033_03#1000",
+                multi: false,
+            },
+        ]
+    },
+    {
+        serviceName: "Body Polishing",
+        sid: "ABM_1004",
+        csid: "ABM",
+        price: "--",
+        metaid: "abm1004$5679",
+        children: [
+            {
+                serviceName: "Full Arms Polishing",
+                sid: "ABM_1004_01",
+                csid: "ABM_1004",
+                price: 1500,
+                metaid: "abm_10044_01#1500",
+                multi: false,
+            },
+            {
+                serviceName: "Full Legs Polishing",
+                sid: "ABM_1004_02",
+                csid: "ABM_1004",
+                price: 1500,
+                metaid: "abm_10044_02#1500",
+                multi: false,
+            },
+            {
+                serviceName: "Full Back Polishing",
+                sid: "ABM_1004_03",
+                csid: "ABM_1004",
+                price: 1500,
+                metaid: "abm_10044_03$1500",
+                multi: false,
+            }
+        ]
+    },
+    {
+        serviceName: "Pedicure (Pedi Spa)",
+        sid: "ABM_1005",
+        csid: "ABM",
+        price: "--",
+        metaid: "abm1005$5679",
+        children: [
+            {
+                serviceName: "Normal Pedicure",
+                sid: "ABM_1005_01",
+                csid: "ABM_1005",
+                price: 500,
+                metaid: "abm_10055_01#0500",
+                multi: false,
+            },
+            {
+                serviceName: "Crystal Pedicure",
+                sid: "ABM_1005_02",
+                csid: "ABM_1005",
+                price: 1500,
+                metaid: "abm_10055_02#1500",
+                multi: false,
+            },
+            {
+                serviceName: "Lotus Pedicure",
+                sid: "ABM_1005_03",
+                csid: "ABM_1005",
+                price: 1200,
+                metaid: "abm_10055_03$1200",
+                multi: false,
+            },
+        ]
+    },
+    {
+        serviceName: "Manicure (Hand Spa)",
+        sid: "ABM_1006",
+        csid: "ABM",
+        price: "--",
+        metaid: "abm1006$5679",
+        children: [
+            {
+                serviceName: "Normal Manicure",
+                sid: "ABM_1006_01",
+                csid: "ABM_1006",
+                price: 500,
+                metaid: "abm_10066_01#0500",
+                multi: false,
+            },
+            {
+                serviceName: "Crystal Manicure",
+                sid: "ABM_1006_02",
+                csid: "ABM_1006",
+                price: 1400,
+                metaid: "abm_10066_02#1400",
+                multi: false,
+            },
+            {
+                serviceName: "Lotus Manicure",
+                sid: "ABM_1006_03",
+                csid: "ABM_1006",
+                price: 1200,
+                metaid: "abm_10066_03$1200",
+                multi: false,
+            },
+        ]
+    },
+]

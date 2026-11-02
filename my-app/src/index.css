@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+/* Design tokens from the static page.
+   They become Tailwind classes: bg-ivory, text-plum, text-berry, bg-copper,
+   font-display, font-sans, and so on. */
+@theme {
+  --color-ivory: #effbec;
+  --color-ivory-card: #fafff8;
+  --color-plum: #3a2429;
+  --color-plum-soft: #6b4f52;
+  --color-berry: #a23e48;
+  --color-berry-deep: #7c2f38;
+  --color-copper: #c6772f;
+  --color-sage: #7c8b6f;
+  --color-sage-deep: #5f6d54;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces", Georgia, serif;
+}
+
+/* Short names so CSS copied from the old page (var(--ivory), var(--plum)...)
+   keeps working. Remove once everything uses Tailwind classes. */
+:root {
+  --ivory: var(--color-ivory);
+  --ivory-card: var(--color-ivory-card);
+  --plum: var(--color-plum);
+  --plum-soft: var(--color-plum-soft);
+  --berry: var(--color-berry);
+  --berry-deep: var(--color-berry-deep);
+  --copper: var(--color-copper);
+  --sage: var(--color-sage);
+  --sage-deep: var(--color-sage-deep);
+  --line: rgba(58, 36, 41, 0.12);
+  --shadow: 0 20px 50px -25px rgba(58, 36, 41, 0.35);
+  --radius: 22px;
+}
+
+/* Safe globals only. Page colours and fonts are set on the site wrapper
+   (class "site"), so the POS screens keep their own look. */
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
+};

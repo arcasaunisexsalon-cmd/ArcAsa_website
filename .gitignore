@@ -1,0 +1,15 @@
+# secrets
+.env
+.env.*
+service_account.json
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
+
+# macOS
+.DS_Store
