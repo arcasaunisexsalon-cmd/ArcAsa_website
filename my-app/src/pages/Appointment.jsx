@@ -13,7 +13,9 @@ const SALON_NAME = "ArcAsa Unisex Salon";
 const SALON_WHATSAPP = "918093077919"; // used for the "send on WhatsApp" backup link
 // Empty while developing (Vite forwards /api to the Python server).
 // On the live site set VITE_API_URL in my-app/.env.production, for example https://api.example.com
-const API_URL = import.meta.env.VITE_API_URL ?? "";
+const API_URL = import.meta.env.VITE_API_BASE_URL ?? 
+import.meta.env.VITE_API_URL ?? 
+(import.meta.env.DEV ? "http://localhost:8000" : "");
 
 const emptyForm = {
   name: "",
@@ -46,8 +48,15 @@ const validate = (f) => {
   if (f.name.trim().length < 2) e.name = "Enter your full name.";
   if (!phoneOk(f.phone)) e.phone = "Enter a valid 10-digit mobile number.";
   if (!emailOk(f.email.trim())) e.email = "Enter a valid email address.";
-  if (!f.sameAsPhone && !phoneOk(f.whatsapp)) e.whatsapp = "Enter a valid 10-digit WhatsApp number.";
-  if (f.collab && !handleOk(f.instagram.trim())) e.instagram = "Enter your Instagram username, for example @yourname.";
+  
+  if (!f.sameAsPhone && !phoneOk(f.whatsapp)) 
+    {
+      e.whatsapp = "Enter a valid 10-digit WhatsApp number.";
+    }
+  if (f.collab && !handleOk(f.instagram.trim())) {
+    e.instagram = "Enter your Instagram username, for example @yourname.";
+  }
+
   return e;
 };
 
@@ -143,7 +152,9 @@ const Appointment = () => {
     setSubmitError("");
     setSending(true);
     try {
-      const res = await fetch(`${API_URL}/api/appointments`, {
+      // Ensure target URL has no trailing slash issues
+      const targetEndpoint = `${API_URL.replace(/\/+$/, "")}/api/appointments`;
+      const res = await fetch(targetEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -152,13 +163,15 @@ const Appointment = () => {
           email: form.email.trim(),
           whatsapp: form.sameAsPhone ? form.phone : form.whatsapp,
           collab: form.collab,
-          instagram: form.collab ? ("@"+form.instagram.trim()) : "",
+          // Safely strip extra @ so we send a valid handle
+
+          instagram: form.collab ? form.instagram.trim().replace(/^@+/, "") : "",
           services: services.map(({ name, scope, group, priceLabel, price }) => ({
             name,
-            scope,
-            group,
-            priceLabel,
-            price,
+            scope: scope || "",
+            group: group || "",
+            priceLabel: priceLabel || "",
+            price: typeof price === "number" ? Math.round(price) : null,
           })),
         }),
         signal: AbortSignal.timeout(15000), // give up after 15 seconds
@@ -341,7 +354,15 @@ const Appointment = () => {
                       inputMode="numeric"
                       autoComplete="tel-national"
                       value={form.phone}
-                      onChange={(e) => set("phone", onlyDigits(e.target.value))}
+                      onChange={(e) => {
+                        const val = onlyDigits(e.target.value);
+                        setForm((f) => ({
+                          ...f,
+                          phone: val,
+                          whatsapp: f.sameAsPhone ? "" : f.whatsapp,
+                        }));
+                        if (errors.phone) setErrors((err) => ({ ...err, phone: undefined }));
+                      }}
                       placeholder="10-digit number"
                       className={inputClass}
                       {...aria("phone")}
@@ -367,7 +388,17 @@ const Appointment = () => {
                       <input
                         type="checkbox"
                         checked={form.sameAsPhone}
-                        onChange={(e) => set("sameAsPhone", e.target.checked)}
+                        onChange={(e) => {
+                          const isSame = e.target.checked;
+                          setForm((f) => ({
+                            ...f,
+                            sameAsPhone: isSame,
+                            whatsapp: isSame ? "" : f.whatsapp, // Reset WhatsApp when syncing with phone
+                          }));
+                          if (isSame) {
+                            setErrors((errs) => ({ ...errs, whatsapp: undefined })); // Clear WhatsApp validation error
+                          }
+                        }}
                         className="h-4 w-4 accent-[#9F2343]"
                       />
                       My WhatsApp number is the same as my mobile number
