@@ -185,6 +185,8 @@ def create_appointment(data: AppointmentRequest):
     return {"status": "success"}
 
 
+@app.get("/")
+@app.head("/")
 @app.get("/api/health")
 @app.get("/health")
 def health_check():
