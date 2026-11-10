@@ -10,7 +10,7 @@ import json
 import logging
 import os
 import re
-from datetime import datetime, timedelta, timezone
+#from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 from pathlib import Path
 from typing import Optional
@@ -21,6 +21,7 @@ from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from google.oauth2.service_account import Credentials
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
+from datetime import date, datetime, time as dtime, timedelta, timezone
 
 load_dotenv()
 
@@ -29,7 +30,7 @@ logger = logging.getLogger("arcasa")
 # ---------------- Settings (all come from server/.env) ---------------- #
 BASE_DIR = Path(__file__).resolve().parent
 
-SPREADSHEET_ID = os.getenv("SPREADSHEET_ID", "")
+SPREADSHEET_ID = os.getenv("SPREADSHEET_ID") or os.getenv("GOOGLE_SHEET_ID", "")
 SHEET_TAB = os.getenv("SHEET_TAB", "")  # tab name; empty means the first tab
 
 # Locally the key is a file. On a host, paste the file's content into this variable instead.
@@ -59,10 +60,17 @@ HEADERS = [
     "Services",
     "Estimated total (Rs)",
     "Status",
+    "Appointment date",
+    "Appointment time",
 ]
 
 PHONE_PATTERN = r"^[6-9]\d{9}$"
 HANDLE_PATTERN = r"^@?[A-Za-z0-9._]{1,30}$"
+OPEN_FROM = "09:00"
+LAST_SLOT = "21:30"
+MAX_DAYS_AHEAD = 60
+MIN_NOTICE = timedelta(minutes=0) # no minimum notice, but can be set to 30 minutes or more if desired
+
 
 # ---------------- App ---------------- #
 app = FastAPI(title="ArcAsa Appointment API")
@@ -114,11 +122,31 @@ class AppointmentRequest(BaseModel):
     collab: bool = False
     instagram: str = Field(default="", max_length=31)
     services: list[ServiceItem] = Field(min_length=1, max_length=30)
+    date: date
+    time: str = Field(pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
 
     @model_validator(mode="after")
-    def instagram_needed_for_collab(self):
+    def validate_request(self):
+        # 1. Collab handle validation
         if self.collab and not re.fullmatch(HANDLE_PATTERN, self.instagram):
             raise ValueError("A valid Instagram username is needed for a collab")
+
+        # 2. Time slot boundary validation
+        if not (OPEN_FROM <= self.time <= LAST_SLOT):
+            raise ValueError("Choose a time between 9:00 AM and 9:30 PM")
+
+        # 3. Date boundary validation
+        now = datetime.now(IST)
+        if self.date < now.date():
+            raise ValueError("Choose an upcoming date")
+        if self.date > now.date() + timedelta(days=MAX_DAYS_AHEAD):
+            raise ValueError("Choose a date within the next 60 days")
+
+        # 4. Notice window validation
+        slot = datetime.combine(self.date, dtime.fromisoformat(self.time), tzinfo=IST)
+        if slot < now + MIN_NOTICE:
+            raise ValueError("Choose a later time")
+
         return self
 
 
@@ -130,8 +158,11 @@ def get_worksheet():
         raise RuntimeError("SPREADSHEET_ID is not set")
 
     if SERVICE_ACCOUNT_JSON:
+        sa_info = json.loads(SERVICE_ACCOUNT_JSON)
+        if "private_key" in sa_info and isinstance(sa_info["private_key"], str):
+            sa_info["private_key"] = sa_info["private_key"].replace("\\n", "\n")
         credentials = Credentials.from_service_account_info(
-            json.loads(SERVICE_ACCOUNT_JSON), scopes=SCOPES
+            sa_info, scopes=SCOPES
         )
     else:
         credentials = Credentials.from_service_account_file(
@@ -165,6 +196,8 @@ def build_row(data: AppointmentRequest) -> list:
         services_text,
         total,
         "New",
+        data.date.isoformat(),                                   # 2026-11-06
+        datetime.strptime(data.time, "%H:%M").strftime("%I:%M %p"),  # 04:30 PM
     ]
 
 
