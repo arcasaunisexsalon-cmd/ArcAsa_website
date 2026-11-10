@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { CalendarDays, Check, Mail, Phone, Plus, Sparkles, User, X, AtSign } from "lucide-react";
+import { CalendarDays, Check, Clock, Mail, Phone, Plus, Sparkles, User, X, AtSign } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 
 import { useBooking } from "../context/BookingContext";
@@ -25,7 +25,11 @@ const emptyForm = {
   whatsapp: "",
   collab: false,
   instagram: "",
+  date: "",
+  time: ""
 };
+
+const fieldOrder = ["date", "time", "name", "phone", "email", "whatsapp", "instagram", "date", "time"];
 
 /* ------------------------------------------------------------------ */
 /* Helpers                                                             */
@@ -36,15 +40,75 @@ const I = ({ icon: Icon, size = 18, className }) => (
 );
 
 const onlyDigits = (v) => v.replace(/\D/g, "").slice(0, 10);
-
+const SLOT_BUFFER_MIN = 0; // minimum minutes from now for a valid slot
+const MAX_DAYS_AHEAD = 60; // maximum days ahead for a valid slot
 const phoneOk = (v) => /^[6-9]\d{9}$/.test(v);
 const emailOk = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);
 const handleOk = (v) => /^@?[A-Za-z0-9._]{1,30}$/.test(v);
 
-const fieldOrder = ["name", "phone", "email", "whatsapp", "instagram"];
+// 09:00, 09:30 ... 21:30
+const ALL_SLOTS = Array.from({ length: 51 }, (_, i) => {
+  const m = 9 * 60 + i * 15;
+  return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+});
+
+const slotLabel = (t) => {
+  const [h, m] = t.split(":").map(Number);
+  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
+};
+
+const fmtDate = (iso) =>
+  new Date(`${iso}T00:00:00`).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+
+// "Now" in India
+const istNow = () => {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+  }).formatToParts(new Date());
+  const g = (t) => parts.find((p) => p.type === t).value;
+  return { date: `${g("year")}-${g("month")}-${g("day")}`, time: `${g("hour")}:${g("minute")}` };
+};
+
+const addDays = (iso, n) => {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+};
+
+// Slots for a date. For today, slots that are too soon are removed.
+const slotsFor = (date) => {
+  const now = istNow();
+  if (date !== now.date) return ALL_SLOTS;
+  const [h, m] = now.time.split(":").map(Number);
+  const earliest = h * 60 + m + SLOT_BUFFER_MIN;
+  return ALL_SLOTS.filter((s) => {
+    const [sh, sm] = s.split(":").map(Number);
+    return sh * 60 + sm >= earliest;
+  });
+};
+
+//const fieldOrder = ["name", "phone", "email", "whatsapp", "instagram"];
 
 const validate = (f) => {
   const e = {};
+  const today = istNow().date;
+  if (!f.date) 
+    {
+      e.date = "Choose a date.";
+    }
+  else if (f.date < today || f.date > addDays(today, MAX_DAYS_AHEAD)) 
+  {
+    e.date = "Choose a date within the next 60 days.";
+  }
+  if (!f.time) 
+    {
+      e.time = "Choose a time.";
+    }
+  else if (!slotsFor(f.date).includes(f.time)) 
+    {
+      e.time = "Choose a time that is still available.";
+    }
   if (f.name.trim().length < 2) e.name = "Enter your full name.";
   if (!phoneOk(f.phone)) e.phone = "Enter a valid 10-digit mobile number.";
   if (!emailOk(f.email.trim())) e.email = "Enter a valid email address.";
@@ -58,18 +122,23 @@ const validate = (f) => {
   }
 
   return e;
+  
 };
+
+
+
 
 const scopeLabel = (s) => [s.scope?.replace("-", " · "), s.group].filter(Boolean).join(" · ");
 
 const buildMessage = (f, services, total, unpriced) => {
   const whatsapp = f.sameAsPhone ? f.phone : f.whatsapp;
   const handle = f.instagram.trim().replace(/^@/, "");
+  const validServices = (services || []).filter((s) => s && s.name);
   return [
     `Hello ${SALON_NAME}, I would like to book an appointment.`,
     "",
     "Services:",
-    ...services.map((s, i) => `${i + 1}. ${s.name} (${scopeLabel(s)}) - ${s.priceLabel || "price at billing"}`),
+    ...validServices.map((s, i) => `${i + 1}. ${s.name} (${scopeLabel(s)}) - ${s.priceLabel || "price at billing"}`),
     "",
     `Estimated total: ₹${total}${unpriced > 0 ? ` + ${unpriced} service(s) priced at billing` : ""}`,
     "",
@@ -77,6 +146,8 @@ const buildMessage = (f, services, total, unpriced) => {
     `Mobile: +91 ${f.phone}`,
     `Email: ${f.email.trim()}`,
     `WhatsApp: +91 ${whatsapp}`,
+    `Date: ${fmtDate(f.date)}`,
+    `Time: ${slotLabel(f.time)}`,
     `Instagram collab: ${f.collab ? `Yes (@${handle})` : "No"}`,
   ].join("\n");
 };
@@ -125,6 +196,8 @@ const Appointment = () => {
   const [submitError, setSubmitError] = useState("");
   const [waUrl, setWaUrl] = useState(""); // ready-made WhatsApp message, used as a backup
 
+  const today = istNow().date;
+
   const unpriced = services.filter((s) => typeof s.price !== "number").length;
 
   const set = (key, value) => {
@@ -151,6 +224,9 @@ const Appointment = () => {
 
     setSubmitError("");
     setSending(true);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
     try {
       // Ensure target URL has no trailing slash issues
       const targetEndpoint = `${API_URL.replace(/\/+$/, "")}/api/appointments`;
@@ -166,32 +242,46 @@ const Appointment = () => {
           // Safely strip extra @ so we send a valid handle
 
           instagram: form.collab ? form.instagram.trim().replace(/^@+/, "") : "",
-          services: services.map(({ name, scope, group, priceLabel, price }) => ({
-            name,
-            scope: scope || "",
-            group: group || "",
-            priceLabel: priceLabel || "",
-            price: typeof price === "number" ? Math.round(price) : null,
+          date: form.date, // <-- ADDED
+          time: form.time, // <-- ADDED
+          services: (services || [])
+          .filter((s) => s && typeof s === "object" && s.name)
+          .map((s) => ({
+            name: String(s.name).trim(),
+            scope: String(s.scope || "").trim(),
+            group: String(s.group || "").trim(),
+            priceLabel: String(s.priceLabel || "").trim(),
+            price: typeof s.price === "number" ? Math.round(s.price) : null,
           })),
         }),
-        signal: AbortSignal.timeout(15000), // give up after 15 seconds
+        signal: controller.signal, // give up after 15 seconds
       });
+      
 
       if (!res.ok) {
         const body = await res.json().catch(() => null);
-        setSubmitError(
-          typeof body?.detail === "string"
-            ? body.detail
-            : "Some details were not accepted. Please check the form and try again."
-        );
+        // Handle both string details (HTTPException) and array details (Pydantic 422)
+        let errMsg = "Some details were not accepted. Please check the form and try again.";
+        if (typeof body?.detail === "string") {
+          errMsg = body.detail;
+        } else if (Array.isArray(body?.detail)) {
+          errMsg = body.detail.map((d) => `${d.loc?.slice(1).join(".")}: ${d.msg}`).join(" | ");
+        }
+
+        setSubmitError(errMsg);
         return;
       }
 
       setSent(true);
       clearServices(); // saved, so the list is not sent twice
-    } catch {
-      setSubmitError("We could not reach the server. Please check your connection and try again.");
+    } catch (err) {
+      if (err.name === "AbortError") {
+        setSubmitError("Request timed out. Please check your connection or send via WhatsApp.");
+      } else {
+        setSubmitError("We could not reach the server. Please check your connection and try again.");
+      }
     } finally {
+      clearTimeout(timeoutId);
       setSending(false);
     }
   };
@@ -380,6 +470,32 @@ const Appointment = () => {
                       className={inputClass}
                       {...aria("email")}
                     />
+                  </Field>
+                  <Field id="field-date" label="Preferred date" icon={CalendarDays} error={errors.date}>
+                    <input
+                      id="field-date" type="date" min={today} max={addDays(today, MAX_DAYS_AHEAD)}
+                      value={form.date}
+                      onChange={(e) => {
+                      const date = e.target.value;
+                      // a time picked earlier may not exist on the new date
+                      setForm((f) => ({ ...f, date, time: slotsFor(date).includes(f.time) ? f.time : "" }));
+                      if (errors.date) setErrors((er) => ({ ...er, date: undefined }));
+                      }}
+                      className={inputClass} {...aria("date")}
+                    />
+                  </Field>
+
+                  <Field id="field-time" label="Preferred time" icon={Clock} error={errors.time}>
+                    <select
+                        id="field-time" value={form.time} disabled={!form.date}
+                        onChange={(e) => set("time", e.target.value)}
+                        className={inputClass} {...aria("time")}
+                    >
+                    <option value="">{form.date ? "Select a time" : "Pick a date first"}</option>
+                    {slotsFor(form.date).map((s) => (
+                    <option key={s} value={s}>{slotLabel(s)}</option>
+                    ))}
+                    </select>
                   </Field>
 
                   {/* WhatsApp */}
